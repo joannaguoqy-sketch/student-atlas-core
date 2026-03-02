@@ -1,21 +1,6 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
-
-// Extend jsPDF with autoTable
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
-
-// Helper to draw Chinese text (jsPDF default font doesn't support CJK well, we use a workaround)
-function setupPdf(): jsPDF {
-  const doc = new jsPDF();
-  // Use helvetica as fallback; for full CJK support, a custom font would be needed
-  doc.setFont("helvetica");
-  return doc;
-}
 
 export async function exportStudentProfile(studentId: string, sectionId: string): Promise<void> {
   const { data: student } = await supabase
@@ -46,10 +31,9 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
     .eq("class_section_id", sectionId)
     .maybeSingle();
 
-  const doc = setupPdf();
+  const doc = new jsPDF();
   let y = 20;
 
-  // Title
   doc.setFontSize(16);
   doc.text("Student Growth Profile", 14, y);
   y += 10;
@@ -63,7 +47,6 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
   if (student.major) doc.text(`Major: ${student.major}`, 14, y);
   y += 10;
 
-  // Formative scores
   if (fs) {
     doc.setFontSize(12);
     doc.text("Formative Assessment (50%)", 14, y);
@@ -74,7 +57,7 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
       fs.homework_score * 0.10 + fs.online_task_score * 0.15
     ).toFixed(1);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       head: [["Item", "Score (0-100)", "Weight"]],
       body: [
@@ -93,7 +76,6 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
     y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // Final exam
   if (fe) {
     doc.setFontSize(12);
     doc.text("Final Exam (50%)", 14, y);
@@ -101,7 +83,7 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
     const examTotal = fe.vocab + fe.cloze + fe.tf + fe.match + fe.deep + fe.translation + fe.writing;
     const weighted = +(examTotal * 0.5).toFixed(1);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       head: [["Item", "Score", "Max"]],
       body: [
@@ -121,7 +103,6 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
     y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // Final total
   if (fs && fe) {
     const formativeTotal = +(
       fs.qa_score * 0.05 + fs.group_score * 0.05 + fs.ideology_score * 0.05 +
@@ -154,8 +135,6 @@ export async function exportClassReport(sectionId: string): Promise<void> {
     .select("student_id, students(name, student_code)")
     .eq("class_section_id", sectionId);
 
-  const studentIds = enrollments?.map((e) => e.student_id) || [];
-
   const { data: formativeData } = await supabase
     .from("formative_scores")
     .select("*")
@@ -166,7 +145,7 @@ export async function exportClassReport(sectionId: string): Promise<void> {
     .select("*")
     .eq("class_section_id", sectionId);
 
-  const doc = setupPdf();
+  const doc = new jsPDF();
   let y = 20;
 
   const termName = (section as any)?.terms?.term_name || "";
@@ -178,10 +157,9 @@ export async function exportClassReport(sectionId: string): Promise<void> {
   doc.setFontSize(10);
   doc.text(`${courseName} / ${termName} / ${section.section_name}`, 14, y);
   y += 6;
-  doc.text(`Students: ${studentIds.length}`, 14, y);
+  doc.text(`Students: ${enrollments?.length || 0}`, 14, y);
   y += 10;
 
-  // Student scores table
   const rows = (enrollments || []).map((e) => {
     const student = (e as any).students;
     const fs = formativeData?.find((f) => f.student_id === e.student_id);
@@ -214,7 +192,7 @@ export async function exportClassReport(sectionId: string): Promise<void> {
     ];
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [["Student Code", "Name", "Formative/50", "Final/50", "Total/100"]],
     body: rows,
@@ -235,7 +213,7 @@ export async function exportCourseReport(courseId: string, termId: string): Prom
     .eq("course_id", courseId)
     .eq("term_id", termId);
 
-  const doc = setupPdf();
+  const doc = new jsPDF();
   let y = 20;
   doc.setFontSize(16);
   doc.text("Course Report", 14, y);
