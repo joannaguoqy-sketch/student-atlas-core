@@ -24,9 +24,9 @@ export const courses: Course[] = [
 
 // ===== ClassSections =====
 export const classSections: ClassSection[] = [
-  { id: "cs1", term_id: "t6", course_id: "c4", section_name: "A班", class_key: "2025-2026-2_大学英语4_A班" },
-  { id: "cs2", term_id: "t6", course_id: "c4", section_name: "B班", class_key: "2025-2026-2_大学英语4_B班" },
-  { id: "cs3", term_id: "t6", course_id: "c4", section_name: "C班", class_key: "2025-2026-2_大学英语4_C班" },
+  { id: "cs1", term_id: "t6", course_id: "c4", section_name: "教学班1", class_key: "2025-2026-2_大学英语4_教学班1" },
+  { id: "cs2", term_id: "t6", course_id: "c4", section_name: "教学班2", class_key: "2025-2026-2_大学英语4_教学班2" },
+  { id: "cs3", term_id: "t6", course_id: "c4", section_name: "教学班3", class_key: "2025-2026-2_大学英语4_教学班3" },
 ];
 
 // ===== Students =====
