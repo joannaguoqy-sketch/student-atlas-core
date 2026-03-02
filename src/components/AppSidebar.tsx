@@ -23,8 +23,8 @@ export default function AppSidebar() {
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
         <GraduationCap className="h-7 w-7 text-sidebar-primary" />
         <div>
-          <h1 className="text-sm font-bold text-sidebar-accent-foreground leading-tight">学生成长评价</h1>
-          <p className="text-[11px] text-sidebar-foreground/60">管理平台</p>
+          <h1 className="text-sm font-bold text-sidebar-accent-foreground leading-tight">大学英语课程</h1>
+          <p className="text-[11px] text-sidebar-foreground/60">学生成长评价与管理平台</p>
         </div>
       </div>
       <nav className="flex-1 py-3 px-3 space-y-0.5">
