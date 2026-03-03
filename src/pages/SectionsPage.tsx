@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Eye, Upload, Download, Pencil, Check, X, Trash2, Loader2 } from "lucide-react";
+import { Plus, Eye, Upload, Download, Pencil, Check, X, Trash2, Loader2, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +39,6 @@ export default function SectionsPage() {
       setLoading(false);
       return;
     }
-    // Get student counts
     const enriched = await Promise.all(
       (data || []).map(async (s: any) => {
         const { count } = await supabase
@@ -57,7 +56,6 @@ export default function SectionsPage() {
 
   const handleAddSection = async () => {
     setAdding(true);
-    // We need a term and course. If none exist, create defaults.
     let termId: string;
     let courseId: string;
     
@@ -107,14 +105,13 @@ export default function SectionsPage() {
     if (error) {
       toast({ title: "重命名失败", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "重命名成功", description: `教学班已重命名为「${renameValue.trim()}」` });
+      toast({ title: "重命名成功" });
       setRenamingId(null);
       await fetchSections();
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    // Delete enrollments first, then section
     await supabase.from("enrollments").delete().eq("class_section_id", id);
     await supabase.from("formative_scores").delete().eq("class_section_id", id);
     await supabase.from("final_exams").delete().eq("class_section_id", id);
@@ -156,22 +153,10 @@ export default function SectionsPage() {
                   <div>
                     {isRenaming ? (
                       <div className="flex items-center gap-2">
-                        <Input
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          className="h-8 w-40 text-sm"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleConfirmRename(section.id);
-                            if (e.key === "Escape") setRenamingId(null);
-                          }}
-                        />
-                        <Button variant="ghost" size="sm" onClick={() => handleConfirmRename(section.id)}>
-                          <Check className="h-4 w-4 text-success" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setRenamingId(null)}>
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} className="h-8 w-40 text-sm" autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") handleConfirmRename(section.id); if (e.key === "Escape") setRenamingId(null); }} />
+                        <Button variant="ghost" size="sm" onClick={() => handleConfirmRename(section.id)}><Check className="h-4 w-4 text-success" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => setRenamingId(null)}><X className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     ) : (
                       <h3 className="font-semibold text-card-foreground">{section.section_name}</h3>
@@ -181,18 +166,18 @@ export default function SectionsPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setRenamingId(section.id); setRenameValue(section.section_name); }}>
                     <Pencil className="h-3.5 w-3.5" /> 重命名
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/analysis?section=${section.id}`)}>
-                    <Eye className="h-3.5 w-3.5" /> 查看
+                    <BarChart3 className="h-3.5 w-3.5" /> 班级分析
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/import")}>
                     <Upload className="h-3.5 w-3.5" /> 导入
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/export")}>
-                    <Download className="h-3.5 w-3.5" /> 导出报告
+                    <Download className="h-3.5 w-3.5" /> 导出
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
