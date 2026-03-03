@@ -3,11 +3,11 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import KpiCard from "@/components/KpiCard";
 import { Button } from "@/components/ui/button";
-import { Download, BarChart3, Clock, TrendingUp, Users, Loader2 } from "lucide-react";
+import { Download, BarChart3, TrendingUp, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { exportClassReport } from "@/lib/exportHelpers";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 interface StudentData {
   id: string;
@@ -20,16 +20,57 @@ interface StudentData {
 }
 
 export default function AnalysisPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const sectionId = searchParams.get("section") || "";
+
+  const [terms, setTerms] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [selectedTerm, setSelectedTerm] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("");
+
   const [studentData, setStudentData] = useState<StudentData[]>([]);
   const [sectionInfo, setSectionInfo] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
 
+  // Load terms and courses for selectors
   useEffect(() => {
-    if (!sectionId) { setLoading(false); return; }
+    async function loadSelectors() {
+      const [{ data: t }, { data: c }] = await Promise.all([
+        supabase.from("terms").select("*").order("term_name"),
+        supabase.from("courses").select("*").order("course_name"),
+      ]);
+      setTerms(t || []);
+      setCourses(c || []);
+
+      // If sectionId is provided, auto-select
+      if (sectionId) {
+        const { data: sec } = await supabase.from("class_sections").select("*, terms(term_name), courses(course_name)").eq("id", sectionId).single();
+        if (sec) {
+          setSelectedTerm(sec.term_id);
+          setSelectedCourse(sec.course_id);
+        }
+      } else if (t && t.length > 0) {
+        setSelectedTerm(t[t.length - 1].id);
+      }
+      setInitLoading(false);
+    }
+    loadSelectors();
+  }, []);
+
+  // Load sections when term+course change
+  useEffect(() => {
+    if (!selectedTerm || !selectedCourse) { setSections([]); return; }
+    supabase.from("class_sections").select("*").eq("term_id", selectedTerm).eq("course_id", selectedCourse)
+      .then(({ data }) => setSections(data || []));
+  }, [selectedTerm, selectedCourse]);
+
+  // Load data when sectionId changes
+  useEffect(() => {
+    if (!sectionId) { setStudentData([]); setSectionInfo(null); return; }
     async function load() {
       setLoading(true);
       const [{ data: section }, { data: enrollments }, { data: fs }, { data: fe }] = await Promise.all([
@@ -71,9 +112,8 @@ export default function AnalysisPage() {
     load();
   }, [sectionId]);
 
-  if (!sectionId) return <div className="p-10 text-center text-muted-foreground">请从教学班管理页面选择一个教学班</div>;
-
   const handleExport = async () => {
+    if (!sectionId) return;
     setExporting(true);
     try {
       await exportClassReport(sectionId);
@@ -84,6 +124,14 @@ export default function AnalysisPage() {
       setExporting(false);
     }
   };
+
+  const selectSection = (id: string) => {
+    setSearchParams({ section: id });
+  };
+
+  if (initLoading) {
+    return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
 
   const courseName = sectionInfo?.courses?.course_name || "";
   const termName = sectionInfo?.terms?.term_name || "";
@@ -101,79 +149,142 @@ export default function AnalysisPage() {
     { range: "<60", count: studentData.filter((s) => s.total < 60).length },
   ];
 
+  const COLORS = ["hsl(152 60% 40%)", "hsl(224 60% 38%)", "hsl(38 92% 50%)", "hsl(0 72% 51%)"];
+  const rawPieData = [
+    { name: "优秀(≥85)", value: studentData.filter(s => s.total >= 85).length },
+    { name: "良好(70-84)", value: studentData.filter(s => s.total >= 70 && s.total < 85).length },
+    { name: "及格(60-69)", value: studentData.filter(s => s.total >= 60 && s.total < 70).length },
+    { name: "不及格(<60)", value: studentData.filter(s => s.total < 60).length },
+  ];
+  const pieData = rawPieData.map((d, i) => ({ ...d, color: COLORS[i] })).filter(d => d.value > 0);
+
   return (
     <div>
       <PageHeader
-        title={`班级分析：${courseName} / ${termName} / ${sectionName}`}
-        actions={
+        title={sectionId ? `班级分析：${courseName} / ${termName} / ${sectionName}` : "班级分析"}
+        actions={sectionId ? (
           <Button size="sm" className="gap-1.5" onClick={handleExport} disabled={exporting}>
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} 导出班级报告
           </Button>
-        }
+        ) : undefined}
       />
 
-      {loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-      ) : studentData.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">该教学班暂无学生数据</div>
-      ) : (
+      {/* Selectors */}
+      <div className="bg-card rounded-lg border border-border p-4 mb-6 flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">学期</label>
+          <select className="border border-input rounded-md px-3 py-2 text-sm bg-background" value={selectedTerm}
+            onChange={(e) => { setSelectedTerm(e.target.value); setSearchParams({}); }}>
+            <option value="">-- 选择学期 --</option>
+            {terms.map((t) => <option key={t.id} value={t.id}>{t.term_name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">课程</label>
+          <select className="border border-input rounded-md px-3 py-2 text-sm bg-background" value={selectedCourse}
+            onChange={(e) => { setSelectedCourse(e.target.value); setSearchParams({}); }}>
+            <option value="">-- 选择课程 --</option>
+            {courses.map((c) => <option key={c.id} value={c.id}>{c.course_name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">教学班</label>
+          <select className="border border-input rounded-md px-3 py-2 text-sm bg-background" value={sectionId}
+            onChange={(e) => selectSection(e.target.value)}>
+            <option value="">-- 选择教学班 --</option>
+            {sections.map((s) => <option key={s.id} value={s.id}>{s.section_name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {!sectionId && (
+        <div className="text-center py-10 text-muted-foreground">请选择学期、课程和教学班以查看分析</div>
+      )}
+
+      {loading && <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}
+
+      {sectionId && !loading && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <KpiCard title="平均总评" value={avg} icon={<BarChart3 className="h-5 w-5" />} />
-            <KpiCard title="形成性均值" value={`${avgFormative}/50`} icon={<TrendingUp className="h-5 w-5" />} />
-            <KpiCard title="期末折算均值" value={`${avgFinal}/50`} icon={<Users className="h-5 w-5" />} />
-          </div>
+          {studentData.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">该教学班暂无学生数据</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <KpiCard title="平均总评" value={avg} icon={<BarChart3 className="h-5 w-5" />} />
+                <KpiCard title="形成性均值" value={`${avgFormative}/50`} icon={<TrendingUp className="h-5 w-5" />} />
+                <KpiCard title="期末折算均值" value={`${avgFinal}/50`} icon={<Users className="h-5 w-5" />} />
+              </div>
 
-          <div className="bg-card rounded-lg p-5 border border-border mb-6">
-            <h3 className="text-sm font-semibold text-card-foreground mb-4">总评分布</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={distribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 13% 87%)" />
-                <XAxis dataKey="range" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(224 60% 38%)" radius={[4, 4, 0, 0]} name="人数" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="bg-card rounded-lg p-5 border border-border">
+                  <h3 className="text-sm font-semibold text-card-foreground mb-4">总评分布</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={distribution}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 13% 87%)" />
+                      <XAxis dataKey="range" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="hsl(224 60% 38%)" radius={[4, 4, 0, 0]} name="人数" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
 
-          <div className="bg-card rounded-lg border border-border overflow-hidden">
-            <div className="p-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-card-foreground">学生列表（{studentData.length} 人）</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">学号</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">姓名</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">形成性</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">期末折算</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">总评</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">听力</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {studentData.map((s) => (
-                    <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 text-muted-foreground">{s.student_code}</td>
-                      <td className="px-4 py-3 font-medium text-card-foreground">{s.name}</td>
-                      <td className="px-4 py-3 text-right">{s.formativeTotal}</td>
-                      <td className="px-4 py-3 text-right">{s.finalWeighted}</td>
-                      <td className={`px-4 py-3 text-right font-semibold ${s.total >= 80 ? "text-success" : s.total >= 60 ? "text-foreground" : "text-destructive"}`}>{s.total}</td>
-                      <td className={`px-4 py-3 text-right ${s.listening < 60 ? "text-destructive" : ""}`}>{s.listening}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate(`/students/${s.id}?section=${sectionId}`)}>
-                          进入档案
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                <div className="bg-card rounded-lg p-5 border border-border">
+                  <h3 className="text-sm font-semibold text-card-foreground mb-4">成绩等级占比</h3>
+                  {pieData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-10">暂无成绩数据</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={pieData} cx="50%" cy="50%" outerRadius={70} dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine>
+                          {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h3 className="text-sm font-semibold text-card-foreground">学生列表（{studentData.length} 人）</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">学号</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">姓名</th>
+                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">形成性</th>
+                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">期末折算</th>
+                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">总评</th>
+                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentData.map((s) => (
+                        <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 text-muted-foreground">{s.student_code}</td>
+                          <td className="px-4 py-3 font-medium text-card-foreground">{s.name}</td>
+                          <td className="px-4 py-3 text-right">{s.formativeTotal}</td>
+                          <td className="px-4 py-3 text-right">{s.finalWeighted}</td>
+                          <td className={`px-4 py-3 text-right font-semibold ${s.total >= 80 ? "text-success" : s.total >= 60 ? "text-foreground" : "text-destructive"}`}>{s.total}</td>
+                          <td className="px-4 py-3 text-center">
+                            <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate(`/students/${s.id}?section=${sectionId}`)}>
+                              进入档案
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

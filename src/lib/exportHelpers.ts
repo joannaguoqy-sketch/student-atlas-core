@@ -35,7 +35,7 @@ export async function exportStudentProfile(studentId: string, sectionId: string)
   let y = 20;
 
   doc.setFontSize(16);
-  doc.text("Student Growth Profile", 14, y);
+  doc.text("Student Growth Profile - UECM Platform", 14, y);
   y += 10;
   doc.setFontSize(10);
   doc.text(`Student: ${student.name} (${student.student_code})`, 14, y);
@@ -152,7 +152,7 @@ export async function exportClassReport(sectionId: string): Promise<void> {
   const courseName = (section as any)?.courses?.course_name || "";
 
   doc.setFontSize(16);
-  doc.text("Class Quality Report", 14, y);
+  doc.text("Class Quality Report - UECM Platform", 14, y);
   y += 8;
   doc.setFontSize(10);
   doc.text(`${courseName} / ${termName} / ${section.section_name}`, 14, y);
@@ -216,7 +216,7 @@ export async function exportCourseReport(courseId: string, termId: string): Prom
   const doc = new jsPDF();
   let y = 20;
   doc.setFontSize(16);
-  doc.text("Course Report", 14, y);
+  doc.text("Course Report - UECM Platform", 14, y);
   y += 8;
   doc.setFontSize(10);
   doc.text(`${course?.course_name || ""} / ${term?.term_name || ""}`, 14, y);
