@@ -19,6 +19,7 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          is_deleted: boolean
           section_name: string
           term_id: string
           updated_at: string
@@ -27,6 +28,7 @@ export type Database = {
           course_id: string
           created_at?: string
           id?: string
+          is_deleted?: boolean
           section_name: string
           term_id: string
           updated_at?: string
@@ -35,6 +37,7 @@ export type Database = {
           course_id?: string
           created_at?: string
           id?: string
+          is_deleted?: boolean
           section_name?: string
           term_id?: string
           updated_at?: string
@@ -110,16 +113,19 @@ export type Database = {
           course_name: string
           created_at: string
           id: string
+          is_deleted: boolean
         }
         Insert: {
           course_name: string
           created_at?: string
           id?: string
+          is_deleted?: boolean
         }
         Update: {
           course_name?: string
           created_at?: string
           id?: string
+          is_deleted?: boolean
         }
         Relationships: []
       }
@@ -128,18 +134,21 @@ export type Database = {
           class_section_id: string
           created_at: string
           id: string
+          is_deleted: boolean
           student_id: string
         }
         Insert: {
           class_section_id: string
           created_at?: string
           id?: string
+          is_deleted?: boolean
           student_id: string
         }
         Update: {
           class_section_id?: string
           created_at?: string
           id?: string
+          is_deleted?: boolean
           student_id?: string
         }
         Relationships: [
@@ -360,6 +369,7 @@ export type Database = {
           course_id: string | null
           created_at: string
           id: string
+          is_deleted: boolean
           record_date: string
           student_id: string
           term_id: string
@@ -372,6 +382,7 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           id?: string
+          is_deleted?: boolean
           record_date?: string
           student_id: string
           term_id: string
@@ -384,6 +395,7 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           id?: string
+          is_deleted?: boolean
           record_date?: string
           student_id?: string
           term_id?: string
@@ -463,6 +475,7 @@ export type Database = {
           created_at: string
           homework_no: number
           id: string
+          is_deleted: boolean
           on_time: boolean
           revision_count: number
           score: number
@@ -478,6 +491,7 @@ export type Database = {
           created_at?: string
           homework_no: number
           id?: string
+          is_deleted?: boolean
           on_time?: boolean
           revision_count?: number
           score?: number
@@ -493,6 +507,7 @@ export type Database = {
           created_at?: string
           homework_no?: number
           id?: string
+          is_deleted?: boolean
           on_time?: boolean
           revision_count?: number
           score?: number
@@ -537,6 +552,7 @@ export type Database = {
           cohort: string | null
           created_at: string
           id: string
+          is_deleted: boolean
           major: string | null
           name: string
           semester_goal: string | null
@@ -548,6 +564,7 @@ export type Database = {
           cohort?: string | null
           created_at?: string
           id?: string
+          is_deleted?: boolean
           major?: string | null
           name: string
           semester_goal?: string | null
@@ -559,6 +576,7 @@ export type Database = {
           cohort?: string | null
           created_at?: string
           id?: string
+          is_deleted?: boolean
           major?: string | null
           name?: string
           semester_goal?: string | null
@@ -601,16 +619,19 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_deleted: boolean
           term_name: string
         }
         Insert: {
           created_at?: string
           id?: string
+          is_deleted?: boolean
           term_name: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_deleted?: boolean
           term_name?: string
         }
         Relationships: []

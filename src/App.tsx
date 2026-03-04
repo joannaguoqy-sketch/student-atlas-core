@@ -13,6 +13,7 @@ import StudentProfilePage from "@/pages/StudentProfilePage";
 import ImportPage from "@/pages/ImportPage";
 import ExportPage from "@/pages/ExportPage";
 import SettingsPage from "@/pages/SettingsPage";
+import DigitalPortraitPage from "@/pages/DigitalPortraitPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/analysis" element={<AnalysisPage />} />
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/students/:id" element={<StudentProfilePage />} />
+            <Route path="/students/:id/portrait" element={<DigitalPortraitPage />} />
             <Route path="/import" element={<ImportPage />} />
             <Route path="/export" element={<ExportPage />} />
             <Route path="/settings" element={<SettingsPage />} />
